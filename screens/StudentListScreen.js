@@ -1,22 +1,50 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, Button, TextInput, I18nManager } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet, Modal, Button, TextInput, I18nManager } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const StudentListScreen = ({ navigation }) => {
-  const [students, setStudents] = useState([{ id: '1', name: 'فريد' }]);
+  const [students, setStudents] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [newStudentName, setNewStudentName] = useState('');
 
-  // Enable RTL for Arabic layout
   useEffect(() => {
     I18nManager.forceRTL(true);
+    loadStudents();
   }, []);
+
+  const loadStudents = async () => {
+    try {
+      const savedStudents = await AsyncStorage.getItem('students');
+      if (savedStudents) {
+        setStudents(JSON.parse(savedStudents));
+      }
+    } catch (error) {
+      console.log('Error loading students', error);
+    }
+  };
+
+  const saveStudents = async (students) => {
+    try {
+      await AsyncStorage.setItem('students', JSON.stringify(students));
+    } catch (error) {
+      console.log('Error saving students', error);
+    }
+  };
 
   const addStudent = () => {
     if (newStudentName.trim().length === 0) return;
     const newStudent = { id: Math.random().toString(), name: newStudentName };
-    setStudents([...students, newStudent]);
+    const updatedStudents = [...students, newStudent];
+    setStudents(updatedStudents);
+    saveStudents(updatedStudents);
     setNewStudentName('');
     setModalVisible(false);
+  };
+
+  const deleteStudent = (studentId) => {
+    const updatedStudents = students.filter(student => student.id !== studentId);
+    setStudents(updatedStudents);
+    saveStudents(updatedStudents);
   };
 
   return (
@@ -24,19 +52,20 @@ const StudentListScreen = ({ navigation }) => {
       <Text style={styles.title}>تتبع الطلاب</Text>
       <FlatList
         data={students}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <TouchableOpacity
+          <Pressable
             style={styles.studentItem}
             onPress={() => navigation.navigate('StudentProfile', { student: item })}
           >
             <Text style={styles.studentName}>{item.name}</Text>
-
-          </TouchableOpacity>
+            <Pressable style={styles.deleteButton} onPress={() => deleteStudent(item.id)}>
+              <Text style={styles.deleteButtonText}>حذف</Text>
+            </Pressable>
+          </Pressable>
         )}
       />
 
-      {/* Modal for Adding Student */}
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalView}>
           <Text style={styles.modalTitle}>إضافة طالب جديد</Text>
@@ -51,10 +80,9 @@ const StudentListScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* Add Student Button */}
-      <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
+      <Pressable style={styles.addButton} onPress={() => setModalVisible(true)}>
         <Text style={styles.addButtonText}>+</Text>
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 };
@@ -77,27 +105,26 @@ const styles = StyleSheet.create({
     padding: 20,
     marginVertical: 10,
     borderRadius: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 5,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   studentName: {
     fontSize: 20,
     color: '#F2DB94',
     fontWeight: 'bold',
-    textAlign: 'right', // Align text to the right
   },
-  lastTime: {
-    fontSize: 14,
-    color: '#F2DB94',
-    marginTop: 5,
-    textAlign: 'right', // Align text to the right
+  deleteButton: {
+    backgroundColor: '#FF6347',
+    padding: 10,
+    borderRadius: 5,
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
   addButton: {
     position: 'absolute',
-    left: 20, // Moved to the left in RTL layout
+    left: 20,
     bottom: 20,
     backgroundColor: '#6A2E2E',
     width: 60,
@@ -105,11 +132,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 30,
-    shadowColor: '#000',
-    shadowOpacity: 0.5,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 5,
-    elevation: 6,
   },
   addButtonText: {
     color: '#F2DB94',
@@ -120,11 +142,6 @@ const styles = StyleSheet.create({
     padding: 20,
     margin: 20,
     borderRadius: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 5,
-    elevation: 6,
     alignItems: 'center',
   },
   modalTitle: {
@@ -139,7 +156,7 @@ const styles = StyleSheet.create({
     width: '80%',
     marginBottom: 20,
     borderRadius: 5,
-    textAlign: 'right', // Text input aligned to the right
+    textAlign: 'right',
   },
 });
 

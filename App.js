@@ -10,8 +10,16 @@ const App = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="StudentList">
-        <Stack.Screen name="StudentList" component={StudentListScreen} options={{ title: 'Students' }} />
-        <Stack.Screen name="StudentProfile" component={StudentProfileScreen} options={{ title: 'Student Profile' }} />
+        <Stack.Screen
+          name="StudentList"
+          component={StudentListScreen}
+          options={{ headerShown: false }} 
+        />
+        <Stack.Screen
+          name="StudentProfile"
+          component={StudentProfileScreen}
+          options={{ headerShown: false }} 
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

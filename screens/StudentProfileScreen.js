@@ -1,75 +1,113 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, Button, TextInput, I18nManager } from 'react-native';
+import {
+  View, Text, FlatList, TouchableOpacity, StyleSheet, Modal, Button, TextInput, Platform,
+  Pressable
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const StudentProfileScreen = ({ route }) => {
   const { student } = route.params;
-  const [records, setRecords] = useState([
-  ]);
+  const [records, setRecords] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [newDate, setNewDate] = useState('');
   const [newAmount, setNewAmount] = useState('');
+  const [date, setDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Enable RTL for Arabic layout
   useEffect(() => {
-    I18nManager.forceRTL(true);
+    loadRecords(); // Load records from AsyncStorage when screen loads
   }, []);
 
+  const loadRecords = async () => {
+    try {
+      const savedRecords = await AsyncStorage.getItem(`records_${student.id}`);
+      if (savedRecords) {
+        setRecords(JSON.parse(savedRecords));
+      }
+    } catch (error) {
+      console.log('Error loading records', error);
+    }
+  };
+
+  const saveRecords = async (newRecords) => {
+    try {
+      await AsyncStorage.setItem(`records_${student.id}`, JSON.stringify(newRecords));
+    } catch (error) {
+      console.log('Error saving records', error);
+    }
+  };
+
   const addRecord = () => {
-    if (newDate.trim().length === 0 || newAmount.trim().length === 0) return;
-    const newRecord = { id: Math.random().toString(), date: newDate, amount: newAmount };
-    setRecords([...records, newRecord]);
-    setNewDate('');
+    if (newAmount.trim().length === 0) return;
+    const newRecord = { id: Math.random().toString(), date: date.toLocaleDateString(), amount: newAmount };
+    const updatedRecords = [...records, newRecord];
+    setRecords(updatedRecords);
+    saveRecords(updatedRecords); // Save the updated records to AsyncStorage
     setNewAmount('');
     setModalVisible(false);
+  };
+
+  const showDatepicker = () => {
+    setShowDatePicker(true);
+  };
+
+  const onDateChange = (event, selectedDate) => {
+    const currentDate = selectedDate || date;
+    setShowDatePicker(Platform.OS === 'ios');
+    setDate(currentDate);
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{student.name}</Text>
-      
-      {/* Table Header */}
+
       <View style={styles.tableHeader}>
         <Text style={styles.tableHeaderText}>المقدار</Text>
         <Text style={styles.tableHeaderText}>التاريخ</Text>
-
       </View>
 
-      {/* Table Body */}
       <FlatList
         data={records}
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
-          <View style={styles.recordRow}>
-            <Text style={styles.recordText}>{item.amount}</Text>
-            <Text style={styles.recordText}>{item.date}</Text>
+          <View style={styles.recordItem}>
+            <Text style={styles.recordAmount}>{item.amount}</Text>
+            <Text style={styles.recordDate}>{item.date}</Text>
           </View>
         )}
       />
 
-      {/* Modal for Adding Record */}
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalView}>
           <Text style={styles.modalTitle}>إضافة سجل جديد</Text>
+          <Pressable onPress={showDatepicker}>
+            <Text style={styles.textInput}>تاريخ: {date.toLocaleDateString()}</Text>
+          </Pressable>
+          {showDatePicker && (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              display="default"
+              onChange={onDateChange}
+            />
+          )}
           <TextInput
-            placeholder="أدخل التاريخ"
-            value={newDate}
-            onChangeText={setNewDate}
-            style={styles.textInput}
-          />
-          <TextInput
-            placeholder="أدخل المقدار"
+            placeholder="أدخل مقدار الحفظ"
             value={newAmount}
             onChangeText={setNewAmount}
             style={styles.textInput}
           />
-          <Button title="إضافة السجل" onPress={addRecord} />
+          <Button title="إضافة" onPress={addRecord} />
           <Button title="إلغاء" onPress={() => setModalVisible(false)} />
         </View>
       </Modal>
 
-      {/* Add Record Button */}
-      <TouchableOpacity style={styles.addButton} onPress={() => setModalVisible(true)}>
+      <Pressable style={styles.addButton} onPress={() => setModalVisible(true)}>
         <Text style={styles.addButtonText}>+</Text>
+      </Pressable>
+      {/* Button to go back to the home screen */}
+      <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('StudentList')}>
+        <Text style={styles.backButtonText}>العودة إلى الصفحة الرئيسية</Text>
       </TouchableOpacity>
     </View>
   );
@@ -91,29 +129,29 @@ const styles = StyleSheet.create({
   tableHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F2DB94',
-    paddingBottom: 10,
-    marginBottom: 10,
+    padding: 10,
+    backgroundColor: '#6A2E2E',
   },
   tableHeaderText: {
     fontSize: 18,
     color: '#F2DB94',
     fontWeight: 'bold',
-    textAlign: 'right',
   },
-  recordRow: {
+  recordItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    padding: 10,
     backgroundColor: '#6A2E2E',
-    padding: 15,
     marginVertical: 5,
-    borderRadius: 10,
+    borderRadius: 5,
   },
-  recordText: {
-    fontSize: 16,
+  recordAmount: {
     color: '#F2DB94',
-    textAlign: 'right',
+    fontSize: 18,
+  },
+  recordDate: {
+    color: '#F2DB94',
+    fontSize: 18,
   },
   addButton: {
     position: 'absolute',
@@ -159,7 +197,19 @@ const styles = StyleSheet.create({
     width: '80%',
     marginBottom: 20,
     borderRadius: 5,
-    textAlign: 'right', // Align input text to right for Arabic
+    textAlign: 'right',
+  },
+  backButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    backgroundColor: '#6A2E2E',
+    padding: 10,
+    borderRadius: 5,
+  },
+  backButtonText: {
+    fontSize: 18,
+    color: '#F2DB94',
   },
 });
 
