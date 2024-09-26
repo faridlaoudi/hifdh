@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { PreventRemoveContext } from '@react-navigation/native';
 
 const StudentProfileScreen = ({ route }) => {
   const { student } = route.params;
@@ -105,10 +106,6 @@ const StudentProfileScreen = ({ route }) => {
       <Pressable style={styles.addButton} onPress={() => setModalVisible(true)}>
         <Text style={styles.addButtonText}>+</Text>
       </Pressable>
-      {/* Button to go back to the home screen */}
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('StudentList')}>
-        <Text style={styles.backButtonText}>العودة إلى الصفحة الرئيسية</Text>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -198,18 +195,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderRadius: 5,
     textAlign: 'right',
-  },
-  backButton: {
-    position: 'absolute',
-    right: 20,
-    bottom: 20,
-    backgroundColor: '#6A2E2E',
-    padding: 10,
-    borderRadius: 5,
-  },
-  backButtonText: {
-    fontSize: 18,
-    color: '#F2DB94',
   },
 });
 
