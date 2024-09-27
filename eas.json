@@ -1,6 +1,6 @@
 {
   "cli": {
-    "appVersionSource": "local"  // You can also use "remote" if you prefer that
+    "appVersionSource": "local"  
   },
   "build": {
     "preview": {

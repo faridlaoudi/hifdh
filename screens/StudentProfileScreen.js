@@ -5,7 +5,22 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { PreventRemoveContext } from '@react-navigation/native';
+
+const mapAmountToArabic = (amount) => {
+  let result = '';
+  const num = parseInt(amount, 10);
+
+  if (num % 8 === 0) {
+    result += `${num / 8} حزب`;
+  } else if (num % 4 === 0) {
+    result += `${num / 4} نصف`;
+  } else if (num % 2 === 0) {
+    result += `${num / 2} ربع`;
+  } else {
+    result += num + ' ثمن ';
+  }
+  return result;
+};
 
 const StudentProfileScreen = ({ route }) => {
   const { student } = route.params;
@@ -14,6 +29,8 @@ const StudentProfileScreen = ({ route }) => {
   const [newAmount, setNewAmount] = useState('');
   const [date, setDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editRecordId, setEditRecordId] = useState(null);
 
   useEffect(() => {
     loadRecords(); // Load records from AsyncStorage when screen loads
@@ -40,14 +57,17 @@ const StudentProfileScreen = ({ route }) => {
 
   const addRecord = () => {
     if (newAmount.trim().length === 0) return;
-    const newRecord = { id: Math.random().toString(), date: date.toLocaleDateString(), amount: newAmount };
+  
+    const mappedAmount = mapAmountToArabic(newAmount);  // Map the amount to Arabic
+  
+    const newRecord = { id: Math.random().toString(), date: date.toLocaleDateString(), amount: mappedAmount };
     const updatedRecords = [...records, newRecord];
     setRecords(updatedRecords);
-    saveRecords(updatedRecords); // Save the updated records to AsyncStorage
+    saveRecords(updatedRecords);  // Save the updated records to AsyncStorage
     setNewAmount('');
     setModalVisible(false);
   };
-
+  
   const showDatepicker = () => {
     setShowDatePicker(true);
   };
@@ -58,11 +78,33 @@ const StudentProfileScreen = ({ route }) => {
     setDate(currentDate);
   };
 
+  // Edit Record
+  const editRecord = (record) => {
+    setNewAmount(record.amount);
+    setDate(new Date(record.date));
+    setEditRecordId(record.id);
+    setIsEditing(true);
+    setModalVisible(true);
+  };
+
+  const updateRecord = () => {
+    const updatedRecords = records.map(record =>
+      record.id === editRecordId ? { ...record, amount: newAmount, date: date.toLocaleDateString() } : record
+    );
+    setRecords(updatedRecords);
+    saveRecords(updatedRecords);
+    setModalVisible(false);
+    setNewAmount('');
+    setIsEditing(false);
+    setEditRecordId(null);
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{student.name}</Text>
 
       <View style={styles.tableHeader}>
+      <Text style={styles.tableHeaderText}></Text>
         <Text style={styles.tableHeaderText}>المقدار</Text>
         <Text style={styles.tableHeaderText}>التاريخ</Text>
       </View>
@@ -72,15 +114,19 @@ const StudentProfileScreen = ({ route }) => {
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
           <View style={styles.recordItem}>
+            <Pressable style={styles.editButton} onPress={() => editRecord(item)}>
+              <Text style={styles.editButtonText}>تعديل</Text>
+            </Pressable>
             <Text style={styles.recordAmount}>{item.amount}</Text>
             <Text style={styles.recordDate}>{item.date}</Text>
+
           </View>
         )}
       />
 
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalView}>
-          <Text style={styles.modalTitle}>إضافة سجل جديد</Text>
+          <Text style={styles.modalTitle}>{isEditing ? 'Edit Record' : 'إضافة سجل جديد'}</Text>
           <Pressable onPress={showDatepicker}>
             <Text style={styles.textInput}>تاريخ: {date.toLocaleDateString()}</Text>
           </Pressable>
@@ -96,10 +142,11 @@ const StudentProfileScreen = ({ route }) => {
             placeholder="أدخل مقدار الحفظ"
             value={newAmount}
             onChangeText={setNewAmount}
+            keyboardType="numeric"  // Add this to ensure only numbers
             style={styles.textInput}
           />
-          <Button title="إضافة" onPress={addRecord} />
-          <Button title="إلغاء" onPress={() => setModalVisible(false)} />
+          <Button title={isEditing ? 'تعديل' : 'إضافة'} onPress={isEditing ? updateRecord : addRecord} />
+          <Button title="إلغاء" onPress={() => { setModalVisible(false); setIsEditing(false); setNewAmount(''); }} />
         </View>
       </Modal>
 
@@ -149,6 +196,15 @@ const styles = StyleSheet.create({
   recordDate: {
     color: '#F2DB94',
     fontSize: 18,
+  },
+  editButton: {
+    backgroundColor: '#F2DB94',
+    padding: 5,
+    borderRadius: 5,
+  },
+  editButtonText: {
+    color: '#430C11',
+    fontSize: 14,
   },
   addButton: {
     position: 'absolute',
